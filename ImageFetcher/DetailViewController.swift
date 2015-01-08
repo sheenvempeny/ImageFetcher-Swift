@@ -10,7 +10,8 @@ import UIKit
 
 class DetailViewController: UIViewController {
 
-    @IBOutlet weak var detailDescriptionLabel: UILabel!
+@IBOutlet weak var ImageView: UIImageView!
+    var selectedImage: UIImage? = nil
     
     
     var detailItem: AnyObject? {
@@ -19,13 +20,40 @@ class DetailViewController: UIViewController {
             self.configureView()
         }
     }
+    
+    func updateImageView()
+    {
+        if (ImageView != nil && selectedImage != nil)
+        {
+            
+            ImageView.image = selectedImage
+        }
+        
+    }
 
     func configureView() {
         // Update the user interface for the detail item.
         if let detail: AnyObject = self.detailItem {
-            if let label = self.detailDescriptionLabel {
-                label.text = detail.description
+            let thumbImage : UIImage = detail.thumbnail
+            var bigImage : UIImage?;
+            bigImage = detail.largeImage?
+            if (bigImage != nil)
+            {
+                selectedImage = bigImage
+                self.updateImageView()
             }
+            else
+            {
+                selectedImage = thumbImage
+                var flickerPhoto : FlickrPhoto = detail as FlickrPhoto
+                Flickr.loadImageForPhoto(flickerPhoto, thumbnail: false, completionBlock: {( photoImage:UIImage! , error: NSError!) -> Void in
+                    self.selectedImage = photoImage
+                    self.updateImageView()
+                })
+            
+            }
+            
+            
         }
         
          
@@ -35,6 +63,7 @@ class DetailViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         self.configureView()
+        updateImageView()
     }
 
     override func didReceiveMemoryWarning() {

@@ -97,7 +97,7 @@ class MasterViewController: UICollectionViewController {
 
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?)
     {
-//        if segue.identifier == "showDetail" {
+        if segue.identifier == "showDetail" {
 //            if let indexPath = self.tableView.indexPathForSelectedRow() {
 //                let object = objects[indexPath.row] as NSDate
 //                let controller = (segue.destinationViewController as UINavigationController).topViewController as DetailViewController
@@ -105,7 +105,16 @@ class MasterViewController: UICollectionViewController {
 //                controller.navigationItem.leftBarButtonItem = self.splitViewController?.displayModeButtonItem()
 //                controller.navigationItem.leftItemsSupplementBackButton = true
 //            }
-//        }
+
+            if let indexPaths = self.collectionView?.indexPathsForSelectedItems()
+            {
+                let array = indexPaths as NSArray
+                let indexPath = array.objectAtIndex(0) as NSIndexPath
+                let object = photoList[indexPath.row]
+                let controller = (segue.destinationViewController as UINavigationController).topViewController as DetailViewController
+                controller.detailItem = object
+            }
+        }
     }
 
   
