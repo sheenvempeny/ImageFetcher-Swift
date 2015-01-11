@@ -19,6 +19,7 @@ enum ViewType
 class MasterViewController: UICollectionViewController {
 
     
+    @IBOutlet weak var progressView: UIActivityIndicatorView!
     var eViewType = ViewType.Grid
     var detailViewController: DetailViewController? = nil
     let _flicker = Flickr()
@@ -59,6 +60,8 @@ class MasterViewController: UICollectionViewController {
             self.detailViewController = controllers[controllers.count-1].topViewController as? DetailViewController
         }
         
+        progressView.startAnimating()
+        
         _flicker.searchFlickrForTerm("dubai", completionBlock:{(searchTearm : String!,results : Array!,error : NSError! ) ->Void in
             
             if (results != nil && results.count > 0)
@@ -73,12 +76,15 @@ class MasterViewController: UICollectionViewController {
                 }
                 
                 dispatch_async(dispatch_get_main_queue(), {()
+                    self.progressView.stopAnimating()
                     self.collectionView?.reloadData();
                 });
                 
             }
             else {
                 //    NSLog(@"Error searching Flickr: %@", error.localizedDescription);
+           
+                 self.progressView.stopAnimating()
             }
             
             
