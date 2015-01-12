@@ -13,6 +13,8 @@
 #import "Flickr.h"
 #import "FlickrPhoto.h"
 #import "FlickrPhotoCell.h"
+#import <AFNetworking/AFNetworking.h>
+#import "AFNetworkActivityIndicatorManager.h"
 
 #endif
 

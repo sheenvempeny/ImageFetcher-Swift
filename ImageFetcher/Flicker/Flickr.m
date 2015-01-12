@@ -30,96 +30,88 @@
 
 - (void)searchFlickrForTerm:(NSString *) term completionBlock:(FlickrSearchCompletionBlock) completionBlock
 {
-    NSString *searchURL = [Flickr flickrSearchURLForSearchTerm:term];
-    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
     
-    dispatch_async(queue, ^{
+    NSString *searchURL = [Flickr flickrSearchURLForSearchTerm:term];
+    NSURL *url = [NSURL URLWithString:searchURL];
+    NSURLRequest *request = [NSURLRequest requestWithURL:url];
+    
+    AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
+    operation.responseSerializer = [AFJSONResponseSerializer serializer];
+    
+    [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject)
+    {
         NSError *error = nil;
-        NSString *searchResultString = [NSString stringWithContentsOfURL:[NSURL URLWithString:searchURL]
-                                                           encoding:NSUTF8StringEncoding
-                                                              error:&error];
-        if (error != nil) {
-            completionBlock(term,nil,error);
-        }
-        else
-        {
-            // Parse the JSON Response
-            NSData *jsonData = [searchResultString dataUsingEncoding:NSUTF8StringEncoding];
-            NSDictionary *searchResultsDict = [NSJSONSerialization JSONObjectWithData:jsonData
-                                                                              options:kNilOptions
-                                                                                error:&error];
-            if(error != nil)
+         NSDictionary *searchResultsDict = (NSDictionary *)responseObject;
+        NSString * status = searchResultsDict[@"stat"];
+        if ([status isEqualToString:@"fail"]) {
+            NSError * error = [[NSError alloc] initWithDomain:@"FlickrSearch" code:0 userInfo:@{NSLocalizedFailureReasonErrorKey: searchResultsDict[@"message"]}];
+            completionBlock(term, nil, error);
+        } else {
+            
+            NSArray *objPhotos = searchResultsDict[@"photos"][@"photo"];
+            NSMutableArray *flickrPhotos = [@[] mutableCopy];
+            for(NSMutableDictionary *objPhoto in objPhotos)
             {
-                completionBlock(term,nil,error);
-            }
-            else
-            {
-                NSString * status = searchResultsDict[@"stat"];
-                if ([status isEqualToString:@"fail"]) {
-                    NSError * error = [[NSError alloc] initWithDomain:@"FlickrSearch" code:0 userInfo:@{NSLocalizedFailureReasonErrorKey: searchResultsDict[@"message"]}];
-                    completionBlock(term, nil, error);
-                } else {
+                FlickrPhoto *photo = [[FlickrPhoto alloc] init];
+                photo.farm = [objPhoto[@"farm"] intValue];
+                photo.server = [objPhoto[@"server"] intValue];
+                photo.secret = objPhoto[@"secret"];
+                photo.photoID = [objPhoto[@"id"] longLongValue];
                 
-                    NSArray *objPhotos = searchResultsDict[@"photos"][@"photo"];
-                    NSMutableArray *flickrPhotos = [@[] mutableCopy];
-                    for(NSMutableDictionary *objPhoto in objPhotos)
-                    {
-                        FlickrPhoto *photo = [[FlickrPhoto alloc] init];
-                        photo.farm = [objPhoto[@"farm"] intValue];
-                        photo.server = [objPhoto[@"server"] intValue];
-                        photo.secret = objPhoto[@"secret"];
-                        photo.photoID = [objPhoto[@"id"] longLongValue];
-                        
-                        NSString *searchURL = [Flickr flickrPhotoURLForFlickrPhoto:photo size:@"m"];
-                        NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:searchURL]
-                                                                  options:0
-                                                                    error:&error];
-                        UIImage *image = [UIImage imageWithData:imageData];
-                        photo.thumbnail = image;
-                        
-                        [flickrPhotos addObject:photo];
-                    }
-                    
-                    completionBlock(term,flickrPhotos,nil);
-                }
+                NSString *searchURL = [Flickr flickrPhotoURLForFlickrPhoto:photo size:@"m"];
+                NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:searchURL]
+                                                          options:0
+                                                            error:&error];
+                UIImage *image = [UIImage imageWithData:imageData];
+                photo.thumbnail = image;
+                
+                [flickrPhotos addObject:photo];
             }
+            
+            completionBlock(term,flickrPhotos,nil);
         }
-    });
+        
+    }
+    failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+        completionBlock(term, nil, error);
+    }];
+    [operation start];
 }
 
 + (void)loadImageForPhoto:(FlickrPhoto *)flickrPhoto thumbnail:(BOOL)thumbnail completionBlock:(FlickrPhotoCompletionBlock) completionBlock
 {
     
     NSString *size = thumbnail ? @"m" : @"b";
-    
     NSString *searchURL = [Flickr flickrPhotoURLForFlickrPhoto:flickrPhoto size:size];
-    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+
+    NSURL *url = [NSURL URLWithString:searchURL];
+    NSURLRequest *request = [NSURLRequest requestWithURL:url];
     
-    dispatch_async(queue, ^{
-        NSError *error = nil;
+    AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
+    operation.responseSerializer = [AFImageResponseSerializer serializer];
+    
+    [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
         
-        NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:searchURL]
-                                                  options:0
-                                                    error:&error];
-        if(error)
+        UIImage *image = responseObject;
+       
+        if([size isEqualToString:@"m"])
         {
-            completionBlock(nil,error);
+            flickrPhoto.thumbnail = image;
         }
         else
         {
-            UIImage *image = [UIImage imageWithData:imageData];
-            if([size isEqualToString:@"m"])
-            {
-                flickrPhoto.thumbnail = image;
-            }
-            else
-            {
-                flickrPhoto.largeImage = image;
-            }
-            completionBlock(image,nil);
+            flickrPhoto.largeImage = image;
         }
         
-    });
+        completionBlock(image,nil);
+
+        
+    } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+        
+         completionBlock(nil,error);
+    }];
+    
+    [operation start];
 }
 
 
