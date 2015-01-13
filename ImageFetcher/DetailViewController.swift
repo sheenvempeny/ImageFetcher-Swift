@@ -8,8 +8,10 @@
 
 import UIKit
 
-class DetailViewController: UIViewController {
+class DetailViewController: UIViewController,UIScrollViewDelegate {
 
+
+@IBOutlet weak var scrollView: UIScrollView!
 @IBOutlet weak var ImageView: UIImageView!
     var selectedImage: UIImage? = nil
     
@@ -30,6 +32,9 @@ class DetailViewController: UIViewController {
         }
         
     }
+    
+    
+
 
     func configureView() {
         // Update the user interface for the detail item.
@@ -37,6 +42,7 @@ class DetailViewController: UIViewController {
             let thumbImage : UIImage = detail.thumbnail
             var bigImage : UIImage?;
             bigImage = detail.largeImage?
+            
             if (bigImage != nil)
             {
                 selectedImage = bigImage
@@ -58,12 +64,18 @@ class DetailViewController: UIViewController {
         
          
     }
-
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         self.configureView()
         updateImageView()
+        self.scrollView.minimumZoomScale = 1.0
+        self.scrollView.maximumZoomScale = 6.0
+        self.scrollView.contentSize = self.ImageView.frame.size
+        self.scrollView.delegate = self
+    
     }
 
     override func didReceiveMemoryWarning() {
@@ -71,6 +83,15 @@ class DetailViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
+    func viewForZoomingInScrollView(scrollView:UIScrollView) ->  UIView
+    {
+        return self.ImageView! as UIView
+    }
+    
+    func scrollViewDidEndZooming(scrollView:UIScrollView,  withView view:UIView,  atScale scale:CGFloat) -> Void
+    {
+        
+    }
 
 }
 
