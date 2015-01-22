@@ -24,7 +24,7 @@ class MasterViewController: UICollectionViewController {
     var detailViewController: DetailViewController? = nil
     let _flicker = Flickr()
     var photoList: [FlickrPhoto] = []
-
+    var refreshControl:UIRefreshControl! = nil
     
     @IBAction func showGridOrList(sender: UISegmentedControl)
     {
@@ -48,20 +48,27 @@ class MasterViewController: UICollectionViewController {
             self.preferredContentSize = CGSize(width: 320.0, height: 600.0)
         }
     }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-        self.navigationItem.leftBarButtonItem = self.editButtonItem()
-        self.collectionView?.backgroundColor = UIColor.clearColor()
     
-        if let split = self.splitViewController {
-            let controllers = split.viewControllers
-            self.detailViewController = controllers[controllers.count-1].topViewController as? DetailViewController
+    func refershControlAction() -> Void
+    {
+        self.searchPhotos(control: self.refreshControl)
+    }
+    
+    func stopControllProgress(#control:UIView) -> Void
+    {
+        if control == self.progressView
+        {
+            self.progressView.stopAnimating()
         }
-        
-        progressView.startAnimating()
-        
+        else
+        {
+            self.refreshControl.endRefreshing()
+        }
+    }
+    
+    
+    func searchPhotos(#control:UIView) -> Void
+    {
         _flicker.searchFlickrForTerm("dubai", completionBlock:{(searchTearm : String!,results : Array!,error : NSError! ) ->Void in
             
             if (results != nil && results.count > 0)
@@ -76,20 +83,45 @@ class MasterViewController: UICollectionViewController {
                 }
                 
                 dispatch_async(dispatch_get_main_queue(), {()
-                    self.progressView.stopAnimating()
+                    
+                    self.stopControllProgress(control: control)
                     self.collectionView?.reloadData();
                 });
                 
             }
             else {
                 //    NSLog(@"Error searching Flickr: %@", error.localizedDescription);
-           
-                 self.progressView.stopAnimating()
+                
+                self.stopControllProgress(control: control)
             }
             
             
             
         } )
+
+    }
+    
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Do any additional setup after loading the view, typically from a nib.
+        self.navigationItem.leftBarButtonItem = self.editButtonItem()
+        self.collectionView?.backgroundColor = UIColor.clearColor()
+    
+        
+        self.refreshControl = UIRefreshControl()
+        refreshControl!.tintColor = UIColor.grayColor();
+        refreshControl!.addTarget(self, action: "refershControlAction", forControlEvents: .ValueChanged)
+        self.collectionView!.addSubview(refreshControl!)
+        self.collectionView!.alwaysBounceVertical = true
+        
+        if let split = self.splitViewController {
+            let controllers = split.viewControllers
+            self.detailViewController = controllers[controllers.count-1].topViewController as? DetailViewController
+        }
+        
+        progressView.startAnimating()
+        self.searchPhotos(control: self.progressView)
 
     }
 
@@ -104,13 +136,6 @@ class MasterViewController: UICollectionViewController {
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?)
     {
         if segue.identifier == "showDetail" {
-//            if let indexPath = self.tableView.indexPathForSelectedRow() {
-//                let object = objects[indexPath.row] as NSDate
-//                let controller = (segue.destinationViewController as UINavigationController).topViewController as DetailViewController
-//                controller.detailItem = object
-//                controller.navigationItem.leftBarButtonItem = self.splitViewController?.displayModeButtonItem()
-//                controller.navigationItem.leftItemsSupplementBackButton = true
-//            }
 
             if let indexPaths = self.collectionView?.indexPathsForSelectedItems()
             {
@@ -145,12 +170,6 @@ class MasterViewController: UICollectionViewController {
     
     func collectionView(inCollectionView:UICollectionView , layout collectionViewLayout:UICollectionViewLayout, sizeForItemAtIndexPath indexPath:NSIndexPath) -> CGSize
     {
-    
-//        var photo = photoList[indexPath.row] as FlickrPhoto
-//        var retval = photo.thumbnail.size.width > 0 ? photo.thumbnail.size : CGSizeMake(100, 100) as CGSize
-//        retval.height += 35;
-//        retval.width += 35;
-//        return retval;
 
         
         var layout = collectionViewLayout as UICollectionViewFlowLayout
